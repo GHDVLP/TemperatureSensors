@@ -1,30 +1,79 @@
-from tkinter import*
-import tkinter
-from matplotlib import*
-from PIL import*
-CountBtn = 1
+# необходимые библиотеки
+
+from tkinter import *
+from PIL import Image, ImageTk
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from datetime import datetime, timedelta
+
+ArrX = [] # время на графике
+ArrY = [] # массив значений температуры   
+start_time = datetime.now()
+
+CountBtnClck = 1
+CountBtnClck1 = 1
+CountBtnClck2 = 1
 # функция съема значения с ползунка
 def scaleget(newVal):
     currentValue['text'] = newVal+'%'
 # текущее состояние кнопок
 def BtnChangeState(text):
-    global CountBtn
+    global CountBtnClck
     if text == '1':
-        CountBtn += 1
-        if CountBtn % 2 == 0:
+        CountBtnClck += 1
+        if CountBtnClck % 2 == 0:
             AutoRegulation['bg'] = 'green'
             ManualRegulation['state'] = 'disabled'
         else:
             ManualRegulation['state'] = 'normal'
             AutoRegulation['bg'] = 'grey'
     if text == '2':
-        CountBtn += 1
-        if CountBtn % 2 == 0:
+        global CountBtnClck1
+        CountBtnClck1 += 1
+        if CountBtnClck1 % 2 == 0:
             AutoRegulation['state'] = 'disabled'
             ManualRegulation['bg'] = 'green'
         else:
             AutoRegulation['state'] = 'normal'
             ManualRegulation['bg'] = 'grey'
+    if text == '3':
+        global CountBtnClck2
+        CountBtnClck2 += 1
+        if CountBtnClck2 % 2 == 0:
+            create_chart_window()
+        else:
+            destroy_chart_window()
+
+def create_chart_window():
+    main.chart_window = Toplevel()
+    main.chart_window.title("График")
+    main.chart_window.geometry("400x300")
+ 
+    fig = plt.Figure(figsize=(5, 4), dpi=100)
+    ax = fig.add_subplot(111)
+ 
+    canvas = FigureCanvasTkAgg(fig, master=main.chart_window)
+    canvas.get_tk_widget().pack()
+
+    def update_chart():
+        elapsed_time = datetime.now() - start_time
+        x = elapsed_time.total_seconds()
+        y = scale.get()*0.25+20
+        ArrX.append(x)
+        ArrY.append(y)
+ 
+        ax.clear()
+        ax.plot(ArrX, ArrY, marker='o', color='b')
+ 
+        canvas.draw()
+ 
+        main.chart_window.after(1000, update_chart)
+ 
+    update_chart()
+
+def destroy_chart_window():
+    if hasattr(main, "chart_window"):
+        main.chart_window.destroy()
 
 # главное окно
 main = Tk()
@@ -44,8 +93,10 @@ frame.pack()
 # описание кнопок
 AutoRegulation = Button(frame, text='Авт. вентилирование', bg = 'grey', width=21, height=2, state = None, command=lambda: BtnChangeState('1'))
 ManualRegulation = Button(frame, text='Вкл. вентилирование', bg = 'grey', width=21, height=2, state = None, command=lambda: BtnChangeState('2'))
+btn = Button(frame, text='График', bg = 'grey', width=21, height=2, state = None, command=lambda: BtnChangeState('3'))
 AutoRegulation.place(x=1011, y=619)
 ManualRegulation.place(x=1010, y=662)
+btn.place(x=200, y=200)
 
 # описание ползунка
 scale_tittle = Label(frame, text = 'Нагрев %', width=10, height=1, bg = 'grey80')
@@ -56,5 +107,6 @@ currentValue = Label(frame, width=9, height=1, bg = 'grey80', highlightbackgroun
 currentValue.place(x=1273, y=521)
 
 # создание графика
+
 
 main.mainloop()
