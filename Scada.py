@@ -40,40 +40,43 @@ def BtnChangeState(text):
         global CountBtnClck2
         CountBtnClck2 += 1
         if CountBtnClck2 % 2 == 0:
-            create_chart_window()
+            create_chart_widget()
         else:
-            destroy_chart_window()
+            destroy_chart_widget()
 
-def create_chart_window():
-    main.chart_window = Toplevel()
-    main.chart_window.title("График")
-    main.chart_window.geometry("400x300")
- 
+def create_chart_widget():
+    global fig
+    global ax
     fig = plt.Figure(figsize=(5, 4), dpi=100)
     ax = fig.add_subplot(111)
- 
-    canvas = FigureCanvasTkAgg(fig, master=main.chart_window)
-    canvas.get_tk_widget().pack()
+    global canvas
+    canvas = FigureCanvasTkAgg(fig, master=frame)
+    canvas.get_tk_widget().place(x=500, y=100)
 
     def update_chart():
-        elapsed_time = datetime.now() - start_time
-        x = elapsed_time.total_seconds()
-        y = scale.get()*0.25+20
+        if CountBtnClck % 2 == 1:
+            global x, y
+            elapsed_time = datetime.now() - start_time
+            x = elapsed_time.total_seconds()
+            y = scale.get()*0.25+20
+        if CountBtnClck % 2 == 0:
+            elapsed_time = datetime.now() - start_time
+            x = elapsed_time.total_seconds()
+            y 
         ArrX.append(x)
         ArrY.append(y)
- 
+
         ax.clear()
         ax.plot(ArrX, ArrY, marker='o', color='b')
- 
+
         canvas.draw()
- 
-        main.chart_window.after(1000, update_chart)
- 
+
+        frame.after(1000, update_chart)
     update_chart()
 
-def destroy_chart_window():
-    if hasattr(main, "chart_window"):
-        main.chart_window.destroy()
+def destroy_chart_widget():
+    canvas.get_tk_widget().destroy()
+
 
 # главное окно
 main = Tk()
