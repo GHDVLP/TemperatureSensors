@@ -6,15 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from datetime import datetime, timedelta
- 
-# начальные значения по умолчанию
-ArrX = [0.0]
-SensorTemp_tempR1_array = [20.0]
-SensorTemp_tempR2_array = [20.0]
-SensorTemp_TPL_array = [20.0]
-SensorTemp_TPK_array = [20.0]
-SensorTemp_RT100_array = [20.0]
- 
+
 start_time = datetime.now()
 CountBtnClck = 1
 CountBtnClck1 = 1
@@ -23,7 +15,7 @@ CountBtnClck3 = 1
  
 # функция съема значения с ползунка
 def scaleget(newVal):
-    currentValue['text'] = newVal+'%'
+    currentValue['text'] = f'Задвижка открыта на\n\n {newVal}/100%'
 # текущее состояние кнопок
 def BtnChangeState(text):
     global CountBtnClck
@@ -49,11 +41,8 @@ def BtnChangeState(text):
         CountBtnClck2 += 1
         if CountBtnClck2 % 2 == 0:
             btn['bg'] = 'green'
-            create_plot()
-            update_plot()
         else:
             btn['bg'] = 'grey'
-            destroy_plot()
     if text == '4':
         global CountBtnClck3
         CountBtnClck3 += 1
@@ -110,38 +99,15 @@ def update_plot():
     canvas.draw()
     labeltempR1.config(text=str(round(SensorTemp_TempR1_array[-1], 2)))
     labeltempR2.config(text=str(round(SensorTemp_TempR2_array[-1], 2)))
-    labelTPL.config(text=str(round(SensorTemp_TPL_array[-1], 2)))
-    labelTPK.config(text=str(round(SensorTemp_TPK_array[-1], 2)))
-    labelRT100.config(text=str(round(SensorTemp_RT100_array[-1], 2)))
     frame.after(1000, update_plot)
-    print(ArrX)
-    print(SensorTemp_TempR1_array)
-    if CountBtnClck2 % 2 == 1:
-        return
- 
-# сброс графика
 def reset_plot():
-    global ArrX, SensorTemp_TempR1_array, SensorTemp_TempR2_array, SensorTemp_TPL_array, SensorTemp_TPK_array, SensorTemp_RT100_array, start_time
     start_time = datetime.now()
-    ArrX = [0.0]
-    SensorTemp_TempR1_array = [20.0]
-    SensorTemp_TempR2_array = [20.0]
-    SensorTemp_TPL_array = [20.0]
-    SensorTemp_TPK_array = [20.0]
-    SensorTemp_RT100_array = [20.0]
     plot.clear()
     canvas.draw()
  
 # Скрытие графика
 def destroy_plot():
-    global ArrX, SensorTemp_TempR1_array, SensorTemp_TempR2_array, SensorTemp_TPL_array, SensorTemp_TPK_array, SensorTemp_RT100_array, start_time
     start_time = datetime.now()
-    ArrX = [0.0]
-    SensorTemp_TempR1_array = [20.0]
-    SensorTemp_TempR2_array = [20.0]
-    SensorTemp_TPL_array = [20.0]
-    SensorTemp_TPK_array = [20.0]
-    SensorTemp_RT100_array = [20.0]
     canvas.get_tk_widget().destroy()
  
 # главное окно
@@ -170,27 +136,17 @@ btn.place(x=200, y=900)
 RedrawBtn.place(x = 150, y = 575)
  
 # описание ползунка
-scale_tittle = Label(frame, text = 'Нагрев %', width=10, height=1, bg = 'grey80')
-scale_tittle.place(x = 1057, y = 348)
-scale = Scale(frame, orient='vertical', from_= 100, to=0, width=70, length=220, showvalue=0, sliderlength=20, sliderrelief='raised', command=scaleget)
-scale.place(x=1057, y=368)
-currentValue = Label(frame, width=9, height=1, bg = 'grey80', highlightbackground = 'black')
-currentValue.place(x=1273, y=521)
+scale = Scale(frame, orient='horizontal', highlightbackground='blue',activebackground='black', from_= 0, to=100, width=20, length=250, showvalue=0, sliderlength=20, sliderrelief='raised', command=scaleget)
+scale.place(x= 620, y=244)
+currentValue = Label(frame, width=36, height=7, bg = 'grey80', highlightbackground = 'black', text = 'Задвижка открыта на\n\n 0/100%')
+currentValue.place(x=620, y=271)
  
 # лейблы для датчиков
  
-labeltempR1 = Label(frame, text = f'Температура радиатора:\n{SensorTemp_tempR1_array}°C', bg = 'green', width= 35, height = 4,font=("Arial", 12))
-labeltempR2= Label(frame, text = f'Температура радиатора:\n{SensorTemp_tempR2_array}°C', bg = 'green', width= 35, height = 4,font=("Arial", 12))
+labeltempR1 = Label(frame, text = f'Температура радиатора:\n{20}°C', bg = 'green', width= 35, height = 4,font=("Arial", 12))
+labeltempR2= Label(frame, text = f'Температура радиатора:\n{20}°C', bg = 'green', width= 35, height = 4,font=("Arial", 12))
 
-labelTPL = Label(frame, text = "", width = 13, height = 1, bg = 'grey80')
-labelTPK = Label(frame, text = "", width = 13, height = 1, bg = 'grey80')
-labelRT100 = Label(frame, text = "", width = 15, height = 1, bg = 'grey80')
- 
 labeltempR1.place(x=1010, y =8)
 labeltempR2.place(x=1210, y=600)
-
-labelTPL.place(x=1241,y=217)
-labelTPK.place(x=1305, y=323)
-labelRT100.place(x=1178, y=333)
 
 main.mainloop()
