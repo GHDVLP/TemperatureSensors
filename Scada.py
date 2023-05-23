@@ -2,8 +2,8 @@
 
 from tkinter import *
 import random
-from PIL import Image, ImageTk
-import matplotlib.pyplot as plt
+from openpyxl import *
+from PIL import*
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from datetime import datetime, timedelta
@@ -21,6 +21,29 @@ CountBtnClck = 1
 CountBtnClck1 = 1
 CountBtnClck2 = 1
 CountBtnClck3 = 1
+
+db = Workbook()
+ActiveList = db.active
+
+# сохранение в excel
+def save_data_to_excel():
+    global ArrX, SensorTemp_RTD_array, SensorTemp_Cuprum_array, SensorTemp_TPL_array, SensorTemp_TPK_array, SensorTemp_RT100_array, db, ActiveList
+    ActiveList.delete_rows(1, ActiveList.max_row)
+    ActiveList['A1'] = 'Время'
+    ActiveList['B1'] = 'RTD °С'
+    ActiveList['C1'] = 'Cuprum °С'
+    ActiveList['D1'] = 'TPL °С'
+    ActiveList['E1'] = 'TPK °С'
+    ActiveList['F1'] = 'RT100 °С'
+    for i in range(len(ArrX)):
+        ActiveList.cell(row=i+2, column=1).value = ArrX[i]
+        ActiveList.cell(row=i+2, column=2).value = SensorTemp_RTD_array[i]
+        ActiveList.cell(row=i+2, column=3).value = SensorTemp_Cuprum_array[i]
+        ActiveList.cell(row=i+2, column=4).value = SensorTemp_TPL_array[i]
+        ActiveList.cell(row=i+2, column=5).value = SensorTemp_TPK_array[i]
+        ActiveList.cell(row=i+2, column=6).value = SensorTemp_RT100_array[i]
+    db.save('Database.xlsx')
+    LabelData.configure(text = 'Данные записаны')
 
 # функция съема значения с ползунка
 def scaleget(newVal):
@@ -121,8 +144,6 @@ def update_plot():
     labelTPK.config(text = f"TPK: {round(SensorTemp_TPK_array[-1], 2)}°C")
     labelRT100.config(text = f"RT100: {round(SensorTemp_RT100_array[-1], 2)}°C")
     frame.after(1000, update_plot)
-    if CountBtnClck2 % 2 == 1:
-        return
 
 # сброс графика
 def reset_plot():
@@ -171,6 +192,8 @@ AutoRegulation = Button(frame, text='Авт. вентилирование', bg =
 ManualRegulation = Button(frame, text='Вкл. вентилирование', bg = 'grey', width=21, height=2, state = None, command=lambda: BtnChangeState('2'))
 btn = Button(frame, text='Запуск/стоп', bg = 'grey', width=21, height=2, state = None, command=lambda: BtnChangeState('3'))
 RedrawBtn = Button(frame, text='Сбросить значения', bg = 'grey', width=21, height=2, command=reset_plot)
+SaveData = Button(frame, text= 'Запись значений в excel', bg = 'blue', width= 20, height=2, command=save_data_to_excel)
+SaveData.place(x= 350, y=575)
 AutoRegulation.place(x=1011, y=619)
 ManualRegulation.place(x=1010, y=662)
 btn.place(x=50, y=50)
@@ -191,13 +214,14 @@ labelCuprum = Label(frame, text = "", width = 15, height = 1, bg = 'grey80')
 labelTPL = Label(frame, text = "", width = 13, height = 1, bg = 'grey80')
 labelTPK = Label(frame, text = "", width = 13, height = 1, bg = 'grey80')
 labelRT100 = Label(frame, text = "", width = 15, height = 1, bg = 'grey80')
+LabelData = Label(frame, text='', width=50, height=5, bg='MistyRose1')
 
 labelRTD.place(x=1063, y =304)
 labelCuprum.place(x=1055, y=246)
 labelTPL.place(x=1241,y=217)
 labelTPK.place(x=1305, y=323)
 labelRT100.place(x=1178, y=333)
-
+LabelData.place(x=150, y= 700)
 
 
 main.mainloop()
