@@ -55,19 +55,8 @@ def BtnChangeState(text):
         CountBtnClck += 1
         if CountBtnClck % 2 == 0:
             AutoRegulation['bg'] = 'green'
-            ManualRegulation['state'] = 'disabled'
         else:
-            ManualRegulation['state'] = 'normal'
             AutoRegulation['bg'] = 'grey'
-    if text == '2':
-        global CountBtnClck1
-        CountBtnClck1 += 1
-        if CountBtnClck1 % 2 == 0:
-            AutoRegulation['state'] = 'disabled'
-            ManualRegulation['bg'] = 'green'
-        else:
-            AutoRegulation['state'] = 'normal'
-            ManualRegulation['bg'] = 'grey'
     if text == '3':
         global CountBtnClck2
         CountBtnClck2 += 1
@@ -169,7 +158,6 @@ def destroy_plot():
     SensorTemp_TPK_array = [20.0]
     SensorTemp_RT100_array = [20.0]
     fig = None
-    plot = None
     canvas.get_tk_widget().destroy()
 
 # главное окно
@@ -188,14 +176,12 @@ label.place(x=0, y=0)
 frame.pack()
 
 # описание кнопок
-AutoRegulation = Button(frame, text='Авт. вентилирование', bg = 'grey', width=21, height=2, state = None, command=lambda: BtnChangeState('1'))
-ManualRegulation = Button(frame, text='Вкл. вентилирование', bg = 'grey', width=21, height=2, state = None, command=lambda: BtnChangeState('2'))
+AutoRegulation = Button(frame, text='Вкл. вентилирование', bg = 'grey', width=21, height=4, state = None, command=lambda: BtnChangeState('1'))
 btn = Button(frame, text='Запуск/стоп', bg = 'grey', width=21, height=2, state = None, command=lambda: BtnChangeState('3'))
 RedrawBtn = Button(frame, text='Сбросить значения', bg = 'grey', width=21, height=2, command=reset_plot)
 SaveData = Button(frame, text= 'Запись значений в excel', bg = 'blue', width= 20, height=2, command=save_data_to_excel)
 SaveData.place(x= 350, y=575)
 AutoRegulation.place(x=1011, y=619)
-ManualRegulation.place(x=1010, y=662)
 btn.place(x=50, y=50)
 RedrawBtn.place(x = 150, y = 575)
 
