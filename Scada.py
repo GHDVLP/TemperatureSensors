@@ -51,7 +51,8 @@ def BtnChangeState(text):
         if CountBtnClck2 % 2 == 0:
             btn['bg'] = 'green'
             create_plot()
-            update_plot()
+            if CountBtnClck2 == 2:
+                update_plot()
         else:
             btn['bg'] = 'grey'
             destroy_plot()
@@ -114,14 +115,12 @@ def update_plot():
             ArrX, SensorTemp_TPK_array, 'o:g',
             ArrX, SensorTemp_RT100_array, 'o:k')
     canvas.draw()
-    labelRTD.config(text=str(round(SensorTemp_RTD_array[-1], 2)))
-    labelCuprum.config(text=str(round(SensorTemp_Cuprum_array[-1], 2)))
-    labelTPL.config(text=str(round(SensorTemp_TPL_array[-1], 2)))
-    labelTPK.config(text=str(round(SensorTemp_TPK_array[-1], 2)))
-    labelRT100.config(text=str(round(SensorTemp_RT100_array[-1], 2)))
+    labelRTD.config(text = f"RTD: {round(SensorTemp_RTD_array[-1], 2)}°C")
+    labelCuprum.config(text = f"Cuprum: {round(SensorTemp_Cuprum_array[-1],2 )}°C")
+    labelTPL.config(text = f"TPL: {round(SensorTemp_TPL_array[-1], 2)}°C")
+    labelTPK.config(text = f"TPK: {round(SensorTemp_TPK_array[-1], 2)}°C")
+    labelRT100.config(text = f"RT100: {round(SensorTemp_RT100_array[-1], 2)}°C")
     frame.after(1000, update_plot)
-    print(ArrX)
-    print(SensorTemp_RTD_array)
     if CountBtnClck2 % 2 == 1:
         return
 
@@ -140,7 +139,7 @@ def reset_plot():
 
 # Скрытие графика
 def destroy_plot():
-    global ArrX, SensorTemp_RTD_array, SensorTemp_Cuprum_array, SensorTemp_TPL_array, SensorTemp_TPK_array, SensorTemp_RT100_array, start_time
+    global ArrX, SensorTemp_RTD_array, SensorTemp_Cuprum_array, SensorTemp_TPL_array, SensorTemp_TPK_array, SensorTemp_RT100_array, start_time, fig, plot
     start_time = datetime.now()
     ArrX = [0.0]
     SensorTemp_RTD_array = [20.0]
@@ -148,6 +147,8 @@ def destroy_plot():
     SensorTemp_TPL_array = [20.0]
     SensorTemp_TPK_array = [20.0]
     SensorTemp_RT100_array = [20.0]
+    fig = None
+    plot = None
     canvas.get_tk_widget().destroy()
 
 # главное окно
