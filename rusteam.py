@@ -1,4 +1,3 @@
-
 from tkinter import *
 import random
 from PIL import Image, ImageTk
@@ -12,7 +11,7 @@ CountBtnClck = 1
 CountBtnClck1 = 1
 CountBtnClck2 = 1
 CountBtnClck3 = 1
- 
+
 # функция съема значения с ползунка
 def scaleget(newVal):
     currentValue['text'] = f'Задвижка открыта на\n\n {newVal}/100%'
@@ -58,6 +57,7 @@ def create_plot():
     plot = fig.add_subplot(1, 1, 1)
     canvas = FigureCanvasTkAgg(fig, master=frame)
     canvas.get_tk_widget().place(x=0, y=0)
+
 # обновление графика
 def update_plot():
     global ArrX, SensorTemp_TempR1_array, SensorTemp_TempR2_array, SensorTemp_TPL_array, SensorTemp_TPK_array, SensorTemp_RT100_array, CountBtnClck2
@@ -126,27 +126,31 @@ label.place(x=0, y=0)
 frame.pack()
  
 # описание кнопок
-AutoRegulation = Button(frame, text='Авт. режим', bg = 'grey', width=21, height=2, state = None, command=lambda: BtnChangeState('1'))
+AutoRegulation = Button(frame, text='Авт. режим', bg = 'grey', width=26, height=4, state = None, command=lambda: BtnChangeState('1'))
 ManualRegulation = Button(frame, text='Вкл. вентилирование', bg = 'grey', width=21, height=2, state = None, command=lambda: BtnChangeState('2'))
-btn = Button(frame, text='Запуск/стоп', bg = 'grey', width=21, height=2, state = None, command=lambda: BtnChangeState('3'))
-RedrawBtn = Button(frame, text='Сбросить значения', bg = 'grey', width=21, height=2, command=reset_plot)
-AutoRegulation.place(x=220, y=950)
-ManualRegulation.place(x=1010, y=662)
-btn.place(x=200, y=900)
-RedrawBtn.place(x = 150, y = 575)
+btn = Button(frame, text='Запуск/стоп', bg = 'grey', width=26, height=4, state = None, command=lambda: BtnChangeState('3'))
+RedrawBtn = Button(frame, text='Сбросить значения', bg = 'grey', width=20, height=4, command=reset_plot)
+AutoRegulation.place(x=172, y=934)
+ManualRegulation.place(x=1240, y=524)
+btn.place(x=380, y=934)
+RedrawBtn.place(x = 3, y = 934)
  
 # описание ползунка
 scale = Scale(frame, orient='horizontal', highlightbackground='blue',activebackground='black', from_= 0, to=100, width=20, length=250, showvalue=0, sliderlength=20, sliderrelief='raised', command=scaleget)
-scale.place(x= 620, y=244)
-currentValue = Label(frame, width=36, height=7, bg = 'grey80', highlightbackground = 'black', text = 'Задвижка открыта на\n\n 0/100%')
-currentValue.place(x=620, y=271)
+scale.place(x= 598, y=244)
+currentValue = Label(frame, width=36, height=4, bg = 'grey80', highlightbackground = 'black', text = 'Задвижка открыта на\n\n 0/100%')
+currentValue.place(x=598, y=271)
  
 # лейблы для датчиков
  
-labeltempR1 = Label(frame, text = f'Температура радиатора:\n{20}°C', bg = 'green', width= 35, height = 4,font=("Arial", 12))
-labeltempR2= Label(frame, text = f'Температура радиатора:\n{20}°C', bg = 'green', width= 35, height = 4,font=("Arial", 12))
+labeltempR1 = Label(frame, text = f'Температура радиатора:\n{20}°C', bg = 'green4', width= 37, height = 4,font=("Arial", 12))
+labeltempR2= Label(frame, text = f'Температура радиатора:\n{20}°C', bg = 'green4', width= 37, height = 4,font=("Arial", 12))
+labelpressure= Label(frame, text = f'Давление в ресивере:\n{0.2}МПа', bg = 'green4', width= 27, height = 4,font=("Arial", 12))
+labelexpenditure= Label(frame, text = f'Расход воздуха:\n{0.2}м^3\мин', bg = 'green4', width= 27, height = 4,font=("Arial", 12))
 
-labeltempR1.place(x=1010, y =8)
-labeltempR2.place(x=1210, y=600)
+labeltempR1.place(x=1020, y =3)
+labeltempR2.place(x=1239, y=598)
+labelpressure.place(x=1128, y=348)
+labelexpenditure.place(x=1524, y=68)
 
 main.mainloop()
