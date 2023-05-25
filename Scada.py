@@ -7,6 +7,7 @@ from PIL import*
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from datetime import datetime, timedelta
+from tkinter import ttk
 
 # начальные значения по умолчанию
 ArrX = [0.0]
@@ -15,12 +16,14 @@ SensorTemp_Cuprum_array = [20.0]
 SensorTemp_TPL_array = [20.0]
 SensorTemp_TPK_array = [20.0]
 SensorTemp_RT100_array = [20.0]
+ValueTemp = []
 
-start_time = datetime.now(tz=None)
 CountBtnClck = 1
 CountBtnClck1 = 1
 CountBtnClck2 = 1
 CountBtnClck3 = 1
+id = None
+temp_id = None
 
 db = Workbook()
 ActiveList = db.active
@@ -47,10 +50,19 @@ def save_data_to_excel():
 
 # функция съема значения с ползунка
 def scaleget(newVal):
-    currentValue['text'] = newVal+'%'
+    scale_tittle.configure(text=f'Нагрев:{newVal}%', font=('Consolas', 10))
+    if int(newVal) > 0:
+        scale_tittle.configure(bg='green')
+    else:
+        scale_tittle.configure(bg='grey80')
+    for i in range(9, -1, -1):
+        if i < int(newVal) // 10:
+            List[i].configure(bg='green')
+        else:
+            List[i].configure(bg='red')
 # текущее состояние кнопок
 def BtnChangeState(text):
-    global CountBtnClck
+    global CountBtnClck, id, temp_id
     if text == '1':
         CountBtnClck += 1
         if CountBtnClck % 2 == 0:
@@ -63,10 +75,12 @@ def BtnChangeState(text):
         if CountBtnClck2 % 2 == 0:
             btn['bg'] = 'green'
             create_plot()
-            if CountBtnClck2 == 2:
-                update_plot()
+            update_plot()
+            if SensorTemp_RT100_array[-1] > 60:
+                frame.after_cancel(temp_id)
         else:
             btn['bg'] = 'grey'
+            frame.after_cancel(id)
             destroy_plot()
     if text == '4':
         global CountBtnClck3
@@ -78,14 +92,15 @@ def BtnChangeState(text):
 
 # создание графика
 def create_plot():
-    global fig, plot, canvas
+    global fig, plot, canvas, start_time
     fig = Figure(figsize=(7,4), dpi=100)
     plot = fig.add_subplot(1, 1, 1)
     canvas = FigureCanvasTkAgg(fig, master=frame)
     canvas.get_tk_widget().place(x=150, y=150)
+    start_time = datetime.now()
 # обновление графика
 def update_plot():
-    global ArrX, SensorTemp_RTD_array, SensorTemp_Cuprum_array, SensorTemp_TPL_array, SensorTemp_TPK_array, SensorTemp_RT100_array, CountBtnClck2
+    global ArrX, SensorTemp_RTD_array, SensorTemp_Cuprum_array, SensorTemp_TPL_array, SensorTemp_TPK_array, SensorTemp_RT100_array, CountBtnClck2, id, start_time, table, temp_id
     elapsed_time = datetime.now() - start_time
     x = elapsed_time.total_seconds()
     if CountBtnClck % 2 == 1:
@@ -94,29 +109,38 @@ def update_plot():
         SensorTemp_TPL_array.append(scale.get()*0.03+SensorTemp_TPL_array[-1])
         SensorTemp_TPK_array.append(scale.get()*0.04+SensorTemp_TPK_array[-1])
         SensorTemp_RT100_array.append(scale.get()*0.05+SensorTemp_RT100_array[-1])
+        
     if CountBtnClck % 2 == 0:
-        if SensorTemp_RTD_array[-1] <= 0:
-            SensorTemp_RTD_array.append(0)
+        if SensorTemp_RTD_array[-1] <= 15:
+            SensorTemp_RTD_array.append(15)
         else:
             SensorTemp_RTD_array.append(SensorTemp_RTD_array[-1] - random.randint(0,1))
-        if SensorTemp_Cuprum_array[-1] <= 0:
-            SensorTemp_Cuprum_array.append(0)
+        if SensorTemp_Cuprum_array[-1] <= 15:
+            SensorTemp_Cuprum_array.append(15)
         else:
             SensorTemp_Cuprum_array.append(SensorTemp_Cuprum_array[-1] - random.randint(1,3))
-        if SensorTemp_TPL_array[-1] <= 0:
-            SensorTemp_TPL_array.append(0)
+        if SensorTemp_TPL_array[-1] <= 15:
+            SensorTemp_TPL_array.append(15)
         else:
             SensorTemp_TPL_array.append(SensorTemp_TPL_array[-1] - random.randint(1,2))
-        if SensorTemp_TPK_array[-1] <= 0:
-            SensorTemp_TPK_array.append(0)
+        if SensorTemp_TPK_array[-1] <= 15:
+            SensorTemp_TPK_array.append(15)
         else:
             SensorTemp_TPK_array.append(SensorTemp_TPK_array[-1] - random.randint(1,4))
-        if SensorTemp_RT100_array[-1] <= 0:
-            SensorTemp_RT100_array.append(0)
+        if SensorTemp_RT100_array[-1] <= 15:
+            SensorTemp_RT100_array.append(15)
         else:
             SensorTemp_RT100_array.append(SensorTemp_RT100_array[-1] - random.randint(1,2))
-
-
+        
+    state = 'normal'
+    if SensorTemp_RT100_array[-1] > 60:
+        state = 'Immediately stop heating!'
+    else:
+        state = 'normal'
+    ValueTemp.append([SensorTemp_RT100_array[-1], x, state])
+    for i in ValueTemp:
+        table.insert("", END, values=i)
+        ValueTemp.clear()
     ArrX.append(x)
     plot.clear()
     plot.set_xlabel('Время [cек]')
@@ -132,7 +156,10 @@ def update_plot():
     labelTPL.config(text = f"TPL: {round(SensorTemp_TPL_array[-1], 2)}°C")
     labelTPK.config(text = f"TPK: {round(SensorTemp_TPK_array[-1], 2)}°C")
     labelRT100.config(text = f"RT100: {round(SensorTemp_RT100_array[-1], 2)}°C")
-    frame.after(1000, update_plot)
+    if SensorTemp_RT100_array[-1] < 65:
+        id = frame.after(1000, update_plot)
+    else:
+        frame.after_cancel(id)
 
 # сброс графика
 def reset_plot():
@@ -169,19 +196,19 @@ window_height = 600
 main.geometry('%dx%d' % (window_width, window_height))
 
 # контейнер с мнемосхемой
-photo = PhotoImage(file='1.png')
+photo = PhotoImage(file='D:\Учеба\Программное обеспечение АС/new.png')
 frame = Frame(main, width=1920, height=1080, bg='MistyRose1')
 label = Label(frame, image=photo)
 label.place(x=0, y=0)
 frame.pack()
 
 # описание кнопок
-AutoRegulation = Button(frame, text='Вкл. вентилирование', bg = 'grey', width=21, height=4, state = None, command=lambda: BtnChangeState('1'))
+AutoRegulation = Button(frame, text='Вкл. вентилирование', bg = 'grey', width=22, height=6, state = None, command=lambda: BtnChangeState('1'))
 btn = Button(frame, text='Запуск/стоп', bg = 'grey', width=21, height=2, state = None, command=lambda: BtnChangeState('3'))
 RedrawBtn = Button(frame, text='Сбросить значения', bg = 'grey', width=21, height=2, command=reset_plot)
 SaveData = Button(frame, text= 'Запись значений в excel', bg = 'blue', width= 20, height=2, command=save_data_to_excel)
 SaveData.place(x= 350, y=575)
-AutoRegulation.place(x=1011, y=619)
+AutoRegulation.place(x=1005, y=610)
 btn.place(x=50, y=50)
 RedrawBtn.place(x = 150, y = 575)
 
@@ -190,8 +217,6 @@ scale_tittle = Label(frame, text = 'Нагрев %', width=10, height=1, bg = 'g
 scale_tittle.place(x = 1057, y = 348)
 scale = Scale(frame, orient='vertical', from_= 100, to=0, width=70, length=220, showvalue=0, sliderlength=20, sliderrelief='raised', command=scaleget)
 scale.place(x=1057, y=368)
-currentValue = Label(frame, width=9, height=1, bg = 'grey80', highlightbackground = 'black')
-currentValue.place(x=1273, y=521)
 
 # лейблы для датчиков
 
@@ -200,7 +225,7 @@ labelCuprum = Label(frame, text = "", width = 15, height = 1, bg = 'grey80')
 labelTPL = Label(frame, text = "", width = 13, height = 1, bg = 'grey80')
 labelTPK = Label(frame, text = "", width = 13, height = 1, bg = 'grey80')
 labelRT100 = Label(frame, text = "", width = 15, height = 1, bg = 'grey80')
-LabelData = Label(frame, text='', width=50, height=5, bg='MistyRose1')
+LabelData = Label(frame, text='', width=50, height=5, bg='grey80', font='Arial')
 
 labelRTD.place(x=1063, y =304)
 labelCuprum.place(x=1055, y=246)
@@ -209,5 +234,24 @@ labelTPK.place(x=1305, y=323)
 labelRT100.place(x=1178, y=333)
 LabelData.place(x=150, y= 700)
 
+# создание таблицы с аварийными значениями
+columns = ('value', 'time', 'comments')
+table = ttk.Treeview(columns=columns, show='headings')
+table.heading('value', text = 'Значение °С')
+table.heading('time', text = 'Время в секундах')
+table.heading('comments', text = 'Состояние')
+table.place(x=1000, y=750)
+
+
+# лейблы и фрейм для нагревательного элемента
+frame_temp = Frame(frame, width=220, height=226)
+frame_temp.place(x=1155, y=363)
+currenty = 0
+List = []
+for i in range(10):
+    lab = Label(frame_temp, width=24, height=1, bg='red', borderwidth=1, highlightcolor='black', highlightbackground='black', highlightthickness=2)
+    lab.pack(side='bottom')
+    currenty += 22
+    List.append(lab)
 
 main.mainloop()
