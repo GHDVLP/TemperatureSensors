@@ -13,23 +13,30 @@ CountBtnClckVentilation = 1
 CountBtnClckStart = 1
 CountBtnClckPlot = 1
 
+global pressure
+
 tempR1 = 15
-tempR2 = 15
+tempR2 = 17
 pressure = 0
 expenditure = 0
 id = None
 
 # функция съема значения с ползунка
 def scaleget(newVal):
+    global expenditure
+    newVal = float(newVal)  # Преобразование строки в число
     currentValue['text'] = f'Задвижка открыта на\n\n {newVal}/100%'
+
+    expenditure = newVal * 20 / 100  # Пропорциональное значение expenditure от 0 до 60
+    # Обновление метки с расходом воздуха
+    labelexpenditure.config(text=f'Расход воздуха:\n{expenditure} м^3/мин')
 
 # функция описания начальных значений "датчиков"
 def update_value():
-    global tempR1, tempR2, pressure, expenditure, id
+    global tempR1, tempR2, expenditure, id
     tempR1 += 5
     tempR2 += 5
-    pressure += 1
-    expenditure += 1
+
     labeltempR1.configure(text=f'Температура радиатора:\n{tempR1}°C')
 
     if tempR1 >= 70:
@@ -44,23 +51,22 @@ def update_value():
     else:
         labeltempR2.configure(bg='green4')
 
-    labelpressure.configure(text=f'Давление в ресивере:\n{pressure}МПа')
-    labelexpenditure.configure(text=f'Расход воздуха:\n{expenditure} м^3/мин')
-
-    if tempR1 < 80: 
-        id = frame.after(1000, update_value)
-    else:
-        frame.after_cancel(id)
 
 # функция вентилирования
 def Tempdown():
     global tempR1, tempR2
-    tempR1 -= 5
-    tempR2 -= 5
-    if tempR1 < 80: 
-        id = frame.after(1000, Tempdown)
-    else:
-        frame.after_cancel(id)
+
+    if CountBtnClckVentilation % 2 != 0:
+        tempR1 -= 5
+        tempR2 -= 5
+        tempR1 = max(tempR1, 15)
+        tempR2 = max(tempR2, 17)  
+
+        if tempR1 < 80:
+            id = frame.after(1000, Tempdown)
+        else:
+            frame.after_cancel(id)
+
     labeltempR1.configure(text=f'Температура радиатора:\n{tempR1}°C')
 
     if tempR1 >= 70:
@@ -69,12 +75,12 @@ def Tempdown():
         labeltempR1.configure(bg='green4')
 
     labeltempR2.configure(text=f'Температура радиатора:\n{tempR2}°C')
-    
+
     if tempR2 >= 75:
         labeltempR2.configure(bg='red')
     else:
         labeltempR2.configure(bg='green4')
-    
+
 # текущее состояние кнопок
 def BtnChangeState(text):
     global CountBtnClckAutoReg, CountBtnClckVentilation, CountBtnClckStart, CountBtnClckPlot, id
@@ -98,22 +104,27 @@ def BtnChangeState(text):
             AutoRegulation['state'] = 'disabled'
             ManualRegulation['bg'] = 'green'
             scale.place_forget()  # Скрыть ползунок
-            Tempdown()  # Вызов функции для понижения температуры
+            if tempR1 < 80:
+                thread = threading.Thread(target=Tempdown)
+                thread.start()
         else:
             AutoRegulation['state'] = 'normal'
-            ManualRegulation['bg'] = 'grey' 
+            ManualRegulation['bg'] = 'grey'
             scale.place(x=598, y=244)  # Показать ползунок
 
     if text == '3':
         CountBtnClckStart += 1
 
         if CountBtnClckStart % 2 == 0:
-            btn['bg'] = 'green' 
-            update_value()
+            btn['bg'] = 'green'
+            thread = threading.Thread(target=update_value)
+            thread.start()
         else:
             frame.after_cancel(id)
             btn['bg'] = 'grey'
-            Tempdown()  # Вызов функции для понижения температуры
+            if tempR1 < 80:
+                thread = threading.Thread(target=Tempdown)
+                thread.start()
 
     if text == '4':
         CountBtnClckPlot += 1
@@ -125,7 +136,9 @@ def BtnChangeState(text):
 
         if CountBtnClckPlot % 2 != 0:
             tempR1_decreasing = False
-            Tempdown()  # Вызов функции для понижения температуры
+            if tempR1 < 80:
+                thread = threading.Thread(target=Tempdown)
+                thread.start()  # Вызов функции для понижения температуры
 
 # создание графика
 def create_plot():
@@ -147,6 +160,17 @@ def destroy_plot():
     start_time = datetime.now()
     canvas.get_tk_widget().destroy()
 
+# Обновление шкалы прогресса
+def update_progress():
+    global pressure
+    
+    for i in range(15):
+        if i < pressure // 100:
+            cells[i].configure(bg="red")
+        else:
+            cells[i].configure(bg="red4")
+    frame.after(1000, update_progress)  
+
 # главное окно
 main = Tk()
 main.state('zoomed')
@@ -161,6 +185,17 @@ frame = Frame(main, width=1920, height=1080, bg='MistyRose1')
 label = Label(frame, image=photo)
 label.place(x=0, y=0)
 frame.pack()
+
+# создания фрейма для шкалы заполнения
+frame_bar = Frame(frame)
+frame_bar.place(x=824, y=402)
+
+global cells
+cells = []
+for i in range(15):
+    cell = Label(frame_bar, width=37, height=1, bg="red4",highlightthickness=1, highlightbackground="black")
+    cell.pack(side="bottom", pady=1, )
+    cells.append(cell)
 
 # описание кнопок
 AutoRegulation = Button(frame, text='Авт. режим', bg='grey', width=26, height=4, state=None, command=lambda: BtnChangeState('1'))
@@ -195,18 +230,32 @@ labelexpenditure.place(x=1524, y=68)
 
 # функция обработки введенного значения
 def handle_input():
-    value = entry.get()
-    print("Введенное значение:", value)
+    global pressure
+    update_progress()
+    target_pressure = int(entry.get())
     entry.delete(0, END)
 
+    pressure = 0  # Объявляем переменную pressure как глобальную
+
+    def increase_pressure():
+        global pressure  # Объявляем переменную pressure как глобальную
+
+        if pressure < target_pressure:
+            pressure += 1
+            labelpressure.config(text=f'Давление в ресивере:\n{pressure} Па')
+            frame.after(20, increase_pressure)
+        else:
+            labelpressure.config(text=f'Давление в ресивере:\n{pressure} Па')  # Обновляем метку после достижения целевого значения
+
+    increase_pressure()
+
 # создание поля ввода
-entry = Entry(frame, width=10, font=("Arial", 12))
-entry.place(x=182, y=625)
-label_mpa = Label(frame, text="МПа", font=("Arial", 12))
-label_mpa.place(x=280, y=625)
+entry = Entry(frame, width=20, font=("Arial", 12))
+entry.place(x=185, y=634)
 
-# кнопка для обработки введенного значения
-input_button = Button(frame, text="Ввести", bg="grey", width=10, height=2, command=handle_input)
-input_button.place(x=450, y=600)
+# создание кнопки для отправки введенного значения
+send_btn = Button(frame, text="Отправить", width=10, height=1, command=handle_input)
+send_btn.place(x=300, y=632)
 
+# запуск главного цикла
 main.mainloop()
