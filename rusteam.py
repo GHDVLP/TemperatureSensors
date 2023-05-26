@@ -1,11 +1,27 @@
 from tkinter import *
+from tkinter import ttk
 from PIL import Image, ImageTk
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from datetime import datetime
 import threading
-import time
+import sqlite3
+
+connection = sqlite3.connect('superscada.db')
+cursor = connection.cursor()
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS data (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tempR1 REAL,
+        tempR2 REAL,
+        pressure REAL,
+        expenditure REAL,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+''')
+connection.commit()
+
 
 start_time = datetime.now()
 CountBtnClckAutoReg = 1
@@ -33,6 +49,30 @@ def scaleget(newVal):
     # Обновление метки с расходом воздуха
     labelexpenditure.config(text=f'Расход воздуха:\n{expenditure} м^3/мин')
 
+# Функция обновления значений таблицы
+def update_table():
+    global pressure, tempR1, tempR2, expenditure
+
+    # Обновление значений в таблице
+    table_pressure.config(text=f'{pressure} [Па]')
+    table_tempR1.config(text=f'{tempR1} [°C]')
+    table_tempR2.config(text=f'{tempR2} [°C]')
+    table_expenditure.config(text=f'{expenditure} [м^3]')
+
+    # Планирование следующего обновления через 1 секунду
+    frame.after(1000, update_table)
+    cursor.execute('''
+        INSERT INTO data (tempR1, tempR2, pressure, expenditure)
+        VALUES (?, ?, ?, ?)
+    ''', (tempR1, tempR2, pressure, expenditure))
+    connection.commit()
+
+    cursor.execute('SELECT tempR1, tempR2, pressure, expenditure FROM data ORDER BY timestamp DESC LIMIT 1')
+    row = cursor.fetchone()
+    if row:
+        tempR1, tempR2, pressure, expenditure = row
+
+
 # функция описания начальных значений "датчиков"
 def update_value():
     global tempR1, tempR2, id, updateid
@@ -47,6 +87,7 @@ def update_value():
         labeltempR1.configure(bg='green4')
 
     labeltempR2.configure(text=f'Температура радиатора:\n{tempR2}°C')
+    update_table()
 
     if tempR2 >= 80:
         labeltempR2.configure(bg='red')
@@ -66,8 +107,7 @@ def Tempdown():
         tempR2 -= 8
         tempR1 = max(tempR1, 15)
         tempR2 = max(tempR2, 17)  
-        #frame.after_cancel(id)  # Исправлено: Отменить вызов функции после достижения целевого значения
-
+        
     labeltempR1.configure(text=f'Температура радиатора:\n{tempR1}°C')
 
     if tempR1 >= 70:
@@ -151,6 +191,7 @@ ArrYR2 = []
 start_time = datetime.now()
 
 def create_chart_window():
+    
     main.chart_window = Toplevel()
     main.chart_window.title("График")
     main.chart_window.geometry("600x400+{}+{}".format(main.winfo_screenwidth() // 2 - 100, main.winfo_screenheight() // 2 - 400))
@@ -206,6 +247,30 @@ label = Label(frame, image=photo)
 label.place(x=0, y=0)
 frame.pack()
 
+# Создание таблицы для отображения данных
+table_frame = Frame(frame)
+table_frame.place(x=1620, y=900)
+
+table_pressure_label = Label(table_frame, text="Давление:")
+table_pressure_label.grid(row=0, column=0)
+table_pressure = Label(table_frame, text="")
+table_pressure.grid(row=0, column=1)
+
+table_tempR1_label = Label(table_frame, text="Темп.1:")
+table_tempR1_label.grid(row=1, column=0)
+table_tempR1 = Label(table_frame, text="")
+table_tempR1.grid(row=1, column=1)
+
+table_tempR2_label = Label(table_frame, text="Темп.2:")
+table_tempR2_label.grid(row=2, column=0)
+table_tempR2 = Label(table_frame, text="")
+table_tempR2.grid(row=2, column=1)
+
+table_expenditure_label = Label(table_frame, text="Расход:")
+table_expenditure_label.grid(row=3, column=0)
+table_expenditure = Label(table_frame, text="")
+table_expenditure.grid(row=3, column=1)
+
 # создания фрейма для шкалы заполнения
 frame_bar = Frame(frame)
 frame_bar.place(x=824, y=402)
@@ -248,6 +313,7 @@ labeltempR2.place(x=1239, y=598)
 labelpressure.place(x=1128, y=348)
 labelexpenditure.place(x=1524, y=68)
 
+
 # функция обработки введенного значения
 def handle_input():
 
@@ -280,3 +346,5 @@ send_btn.place(x=300, y=632)
 
 # запуск главного цикла
 main.mainloop()
+
+connection.close()
