@@ -13,8 +13,9 @@ CountBtnClckVentilation = 1
 CountBtnClckStart = 1
 CountBtnClckPlot = 1
 
-global pressure
+fig_window = None
 
+global pressure
 tempR1 = 15
 tempR2 = 17
 pressure = 0
@@ -129,36 +130,35 @@ def BtnChangeState(text):
     if text == '4':
         CountBtnClckPlot += 1
 
-        if CountBtnClckPlot % 2 == 0:
-            RedrawBtn['bg'] = 'green'
-        else:
-            RedrawBtn['bg'] = 'grey'
+    if CountBtnClckPlot % 2 == 0:
+        
+        show_plot()  # Показать график
+    else:
 
-        if CountBtnClckPlot % 2 != 0:
-            tempR1_decreasing = False
-            if tempR1 < 80:
-                thread = threading.Thread(target=Tempdown)
-                thread.start()  # Вызов функции для понижения температуры
+        destroy_plot()  # Скрыть график
+    
 
-# создание графика
-def create_plot():
-    global fig, plot, canvas
-    fig = Figure(figsize=(7, 4), dpi=100)
-    plot = fig.add_subplot(1, 1, 1)
-    canvas = FigureCanvasTkAgg(fig, master=frame)
-    canvas.get_tk_widget().place(x=0, y=0)
-
-def reset_plot():
-    global start_time
-    start_time = datetime.now()
-    plot.clear()
+#создание графика
+def show_plot():
+    global fig_window
+    fig_window = Toplevel()
+    fig_window.title("График")
+    fig_window.geometry("800x600")
+    fig = Figure(figsize=(5, 4), dpi=100)
+    
+    # Создание холста для отображения графика
+    canvas = FigureCanvasTkAgg(fig, master=fig_window)
     canvas.draw()
+    canvas.get_tk_widget().pack(fill=BOTH, expand=True)
+    
 
 # Скрытие графика
 def destroy_plot():
-    global start_time
-    start_time = datetime.now()
-    canvas.get_tk_widget().destroy()
+    global fig_window
+    fig_window.destroy()
+    fig_window = None
+
+
 
 # Обновление шкалы прогресса
 def update_progress():
@@ -201,7 +201,7 @@ for i in range(15):
 AutoRegulation = Button(frame, text='Авт. режим', bg='grey', width=26, height=4, state=None, command=lambda: BtnChangeState('1'))
 ManualRegulation = Button(frame, text='Вкл. вентилирование', bg='grey', width=21, height=2, state=None, command=lambda: BtnChangeState('2'))
 btn = Button(frame, text='Запуск/стоп', bg='grey', width=26, height=4, state=None, command=lambda: BtnChangeState('3'))
-RedrawBtn = Button(frame, text='Сбросить значения', bg='grey', width=20, height=4, command=reset_plot)
+RedrawBtn = Button(frame, text='Сбросить значения', bg='grey', width=20, height=4, command=destroy_plot)
 Btnplot = Button(frame, text='График показать/скрыть', bg='grey', width=26, height=4, state=None, command=lambda: BtnChangeState('4'))
 AutoRegulation.place(x=172, y=934)
 ManualRegulation.place(x=1240, y=524)
@@ -230,15 +230,16 @@ labelexpenditure.place(x=1524, y=68)
 
 # функция обработки введенного значения
 def handle_input():
+
     global pressure
     update_progress()
     target_pressure = int(entry.get())
     entry.delete(0, END)
 
-    pressure = 0  # Объявляем переменную pressure как глобальную
+    pressure = 0  
 
     def increase_pressure():
-        global pressure  # Объявляем переменную pressure как глобальную
+        global pressure  
 
         if pressure < target_pressure:
             pressure += 1
