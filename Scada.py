@@ -22,11 +22,23 @@ CountBtnClck = 1
 CountBtnClck1 = 1
 CountBtnClck2 = 1
 CountBtnClck3 = 1
+CountTime = int(0)
 id = None
 temp_id = None
 
 db = Workbook()
 ActiveList = db.active
+flag = True
+def show():
+    global flag
+    if flag == True:
+        Entry_label.place(x=150, y = 800)
+        Entry_value.place(x=150, y = 850)
+        flag = False
+    elif flag == False:
+        Entry_value.place_forget()
+        Entry_label.place_forget()
+        flag = True
 
 # сохранение в excel
 def save_data_to_excel():
@@ -100,7 +112,7 @@ def create_plot():
     start_time = datetime.now()
 # обновление графика
 def update_plot():
-    global ArrX, SensorTemp_RTD_array, SensorTemp_Cuprum_array, SensorTemp_TPL_array, SensorTemp_TPK_array, SensorTemp_RT100_array, CountBtnClck2, id, start_time, table, temp_id
+    global ArrX, SensorTemp_RTD_array, SensorTemp_Cuprum_array, SensorTemp_TPL_array, SensorTemp_TPK_array, SensorTemp_RT100_array, CountBtnClck2, id, start_time, table, temp_id, CountTime, Entry_value
     elapsed_time = datetime.now() - start_time
     x = elapsed_time.total_seconds()
     if CountBtnClck % 2 == 1:
@@ -133,10 +145,10 @@ def update_plot():
             SensorTemp_RT100_array.append(SensorTemp_RT100_array[-1] - random.randint(1,2))
         
     state = 'normal'
-    if SensorTemp_RT100_array[-1] > 60:
+    if SensorTemp_RT100_array[-1] >= 60:
         state = 'Immediately stop heating!'
-    else:
-        state = 'normal'
+    elif SensorTemp_RT100_array[-1] < 60:
+        state = ''
     ValueTemp.append([SensorTemp_RT100_array[-1], x, state])
     for i in ValueTemp:
         table.insert("", END, values=i)
@@ -156,8 +168,12 @@ def update_plot():
     labelTPL.config(text = f"TPL: {round(SensorTemp_TPL_array[-1], 2)}°C")
     labelTPK.config(text = f"TPK: {round(SensorTemp_TPK_array[-1], 2)}°C")
     labelRT100.config(text = f"RT100: {round(SensorTemp_RT100_array[-1], 2)}°C")
-    if SensorTemp_RT100_array[-1] < 65:
+    if SensorTemp_RT100_array[-1] <= 60:
         id = frame.after(1000, update_plot)
+        CountTime += 1
+        if CountTime > int(Entry_value.get()):
+            frame.after_cancel(id)
+            CountTime = 0
     else:
         frame.after_cancel(id)
 
@@ -196,7 +212,7 @@ window_height = 600
 main.geometry('%dx%d' % (window_width, window_height))
 
 # контейнер с мнемосхемой
-photo = PhotoImage(file='D:\Учеба\Программное обеспечение АС/new.png')
+photo = PhotoImage(file='1.png')
 frame = Frame(main, width=1920, height=1080, bg='MistyRose1')
 label = Label(frame, image=photo)
 label.place(x=0, y=0)
@@ -207,6 +223,8 @@ AutoRegulation = Button(frame, text='Вкл. вентилирование', bg =
 btn = Button(frame, text='Запуск/стоп', bg = 'grey', width=21, height=2, state = None, command=lambda: BtnChangeState('3'))
 RedrawBtn = Button(frame, text='Сбросить значения', bg = 'grey', width=21, height=2, command=reset_plot)
 SaveData = Button(frame, text= 'Запись значений в excel', bg = 'blue', width= 20, height=2, command=save_data_to_excel)
+BtnShow = Button(frame, text = 'Ввести поле для ввода времени\nСкрыть поле для ввода', bg='grey80',width=40, height=2, command=show)
+BtnShow.place(x=150, y=950) 
 SaveData.place(x= 350, y=575)
 AutoRegulation.place(x=1005, y=610)
 btn.place(x=50, y=50)
@@ -249,9 +267,12 @@ frame_temp.place(x=1155, y=363)
 currenty = 0
 List = []
 for i in range(10):
-    lab = Label(frame_temp, width=24, height=1, bg='red', borderwidth=1, highlightcolor='black', highlightbackground='black', highlightthickness=2)
+    lab = Label(frame_temp, width=22, height=1, bg='red', borderwidth=1, highlightcolor='black', highlightbackground='black', highlightthickness=2)
     lab.pack(side='bottom')
     currenty += 22
     List.append(lab)
+
+Entry_value = Entry(frame, width=20, bg='grey80', font=('Consolas', 12))
+Entry_label = Label(frame, width=60, height=2, bg='grey80', text = 'Задайте время для графика в поле ниже:')
 
 main.mainloop()
