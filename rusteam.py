@@ -39,7 +39,6 @@ def update_value():
     tempR1 += 5
     tempR2 += 5
 
-
     labeltempR1.configure(text=f'Температура радиатора:\n{tempR1}°C')
 
     if tempR1 >= 80:
@@ -53,9 +52,8 @@ def update_value():
         labeltempR2.configure(bg='red')
     else:
         labeltempR2.configure(bg='green4')
-    if tempR1 and tempR2 < 80:
-        updateid = frame.after(1000, update_value)
-    else: 
+    updateid = frame.after(1000, update_value)
+    if tempR1 and tempR2 > 100:
         frame.after_cancel(updateid)
 
     
@@ -64,15 +62,11 @@ def Tempdown():
     global tempR1, tempR2, id
 
     if CountBtnClckVentilation % 2 == 0:
-        tempR1 -= 5
-        tempR2 -= 5
+        tempR1 -= 8
+        tempR2 -= 8
         tempR1 = max(tempR1, 15)
         tempR2 = max(tempR2, 17)  
-
-        if tempR1 > 50:
-            id = frame.after(1000, Tempdown)
-        else:
-            frame.after_cancel(id)  # Исправлено: Отменить вызов функции после достижения целевого значения
+        #frame.after_cancel(id)  # Исправлено: Отменить вызов функции после достижения целевого значения
 
     labeltempR1.configure(text=f'Температура радиатора:\n{tempR1}°C')
 
@@ -87,6 +81,7 @@ def Tempdown():
         labeltempR2.configure(bg='red')
     else:
         labeltempR2.configure(bg='green4')
+    id = frame.after(1000, Tempdown)
 
 # текущее состояние кнопок
 def BtnChangeState(text):
@@ -98,6 +93,14 @@ def BtnChangeState(text):
         if CountBtnClckAutoReg % 2 == 0:
             AutoRegulation['bg'] = 'green'
             ManualRegulation['state'] = 'disabled'
+            update_value()
+            if tempR1 or tempR2 > 75:
+                frame.after_cancel(updateid)
+                updateid = None
+                Tempdown()
+            if tempR1 and tempR2 < 20:
+                frame.after_cancel(id)
+                id = None
             scale.place_forget()  # Скрыть ползунок
         else:
             ManualRegulation['state'] = 'normal'
@@ -110,9 +113,13 @@ def BtnChangeState(text):
         if CountBtnClckVentilation % 2 == 0:
             AutoRegulation['state'] = 'disabled'
             ManualRegulation['bg'] = 'green'
-            if tempR1 < 80:
-                thread = threading.Thread(target=Tempdown)
-                thread.start()
+            threadminus = threading.Thread(target=Tempdown)
+            threadminus.start()
+            frame.after_cancel(updateid)
+            updateid = None
+            if tempR2 or tempR1 <= 20:
+                frame.after_cancel(id)
+                id = None
         else:
             AutoRegulation['state'] = 'normal'
             ManualRegulation['bg'] = 'grey'
@@ -123,20 +130,18 @@ def BtnChangeState(text):
 
         if CountBtnClckStart % 2 == 0:
             btn['bg'] = 'green'
-            thread = threading.Thread(target=update_value)
-            thread.start()
+            threadplus = threading.Thread(target=update_value)
+            threadplus.start()
+            if (tempR1 or tempR2) >= 80:
+                frame.after_cancel(updateid)
+                updateid = None
         else:
-            frame.after_cancel(id)
             btn['bg'] = 'grey'
-            if tempR1 < 80:
-                thread = threading.Thread(target=Tempdown)
-                thread.start()
 
     if text == '4':
         CountBtnClckPlot += 1
-
-    if CountBtnClckPlot % 2 == 0:
-        create_chart_window()
+        if CountBtnClckPlot == 2:
+            create_chart_window()
         
 
 ArrX = []
