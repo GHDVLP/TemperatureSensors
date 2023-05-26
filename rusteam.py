@@ -21,6 +21,7 @@ tempR2 = 17
 pressure = 0
 expenditure = 0
 id = None
+updateid = None
 
 # функция съема значения с ползунка
 def scaleget(newVal):
@@ -34,39 +35,44 @@ def scaleget(newVal):
 
 # функция описания начальных значений "датчиков"
 def update_value():
-    global tempR1, tempR2, expenditure, id
+    global tempR1, tempR2, id, updateid
     tempR1 += 5
     tempR2 += 5
 
+
     labeltempR1.configure(text=f'Температура радиатора:\n{tempR1}°C')
 
-    if tempR1 >= 70:
+    if tempR1 >= 80:
         labeltempR1.configure(bg='red')
     else:
         labeltempR1.configure(bg='green4')
 
     labeltempR2.configure(text=f'Температура радиатора:\n{tempR2}°C')
 
-    if tempR2 >= 75:
+    if tempR2 >= 80:
         labeltempR2.configure(bg='red')
     else:
         labeltempR2.configure(bg='green4')
+    if tempR1 and tempR2 < 80:
+        updateid = frame.after(1000, update_value)
+    else: 
+        frame.after_cancel(updateid)
 
-
+    
 # функция вентилирования
 def Tempdown():
-    global tempR1, tempR2
+    global tempR1, tempR2, id
 
-    if CountBtnClckVentilation % 2 != 0:
+    if CountBtnClckVentilation % 2 == 0:
         tempR1 -= 5
         tempR2 -= 5
         tempR1 = max(tempR1, 15)
         tempR2 = max(tempR2, 17)  
 
-        if tempR1 < 80:
+        if tempR1 > 50:
             id = frame.after(1000, Tempdown)
         else:
-            frame.after_cancel(id)
+            frame.after_cancel(id)  # Исправлено: Отменить вызов функции после достижения целевого значения
 
     labeltempR1.configure(text=f'Температура радиатора:\n{tempR1}°C')
 
@@ -104,14 +110,13 @@ def BtnChangeState(text):
         if CountBtnClckVentilation % 2 == 0:
             AutoRegulation['state'] = 'disabled'
             ManualRegulation['bg'] = 'green'
-            scale.place_forget()  # Скрыть ползунок
             if tempR1 < 80:
                 thread = threading.Thread(target=Tempdown)
                 thread.start()
         else:
             AutoRegulation['state'] = 'normal'
             ManualRegulation['bg'] = 'grey'
-            scale.place(x=598, y=244)  # Показать ползунок
+        
 
     if text == '3':
         CountBtnClckStart += 1
@@ -131,34 +136,44 @@ def BtnChangeState(text):
         CountBtnClckPlot += 1
 
     if CountBtnClckPlot % 2 == 0:
+        create_chart_window()
         
-        show_plot()  # Показать график
-    else:
 
-        destroy_plot()  # Скрыть график
-    
+ArrX = []
+ArrYR1 = []
+ArrYR2 = []
 
-#создание графика
-def show_plot():
-    global fig_window
-    fig_window = Toplevel()
-    fig_window.title("График")
-    fig_window.geometry("800x600")
-    fig = Figure(figsize=(5, 4), dpi=100)
-    
-    # Создание холста для отображения графика
-    canvas = FigureCanvasTkAgg(fig, master=fig_window)
-    canvas.draw()
-    canvas.get_tk_widget().pack(fill=BOTH, expand=True)
-    
+start_time = datetime.now()
 
-# Скрытие графика
-def destroy_plot():
-    global fig_window
-    fig_window.destroy()
-    fig_window = None
+def create_chart_window():
+    main.chart_window = Toplevel()
+    main.chart_window.title("График")
+    main.chart_window.geometry("600x400+{}+{}".format(main.winfo_screenwidth() // 2 - 100, main.winfo_screenheight() // 2 - 400))
+ 
+    fig = plt.Figure(figsize=(5, 4), dpi=100)
+    ax = fig.add_subplot(111)
+ 
+    canvas = FigureCanvasTkAgg(fig, master=main.chart_window)
+    canvas.get_tk_widget().pack()
+ 
+    def update_chart():
+        global tempR1, tempR2
 
-
+        elapsed_time = datetime.now() - start_time
+        x = elapsed_time.total_seconds()
+        y = scale.get()
+        ArrX.append(x)
+        ArrYR1.append(tempR1)
+        ArrYR2.append(tempR2)
+        ax.clear()
+        ax.plot(ArrX, ArrYR1, label = "Темп. датчик радиатора 1", color='g')
+        ax.plot(ArrX, ArrYR2, label = "Темп. датчик радиатора 2", color ='red')
+        ax.legend()
+        canvas.draw()
+        main.chart_window.after(1000, update_chart)
+        
+    update_chart()
+ 
 
 # Обновление шкалы прогресса
 def update_progress():
@@ -201,7 +216,7 @@ for i in range(15):
 AutoRegulation = Button(frame, text='Авт. режим', bg='grey', width=26, height=4, state=None, command=lambda: BtnChangeState('1'))
 ManualRegulation = Button(frame, text='Вкл. вентилирование', bg='grey', width=21, height=2, state=None, command=lambda: BtnChangeState('2'))
 btn = Button(frame, text='Запуск/стоп', bg='grey', width=26, height=4, state=None, command=lambda: BtnChangeState('3'))
-RedrawBtn = Button(frame, text='Сбросить значения', bg='grey', width=20, height=4, command=destroy_plot)
+RedrawBtn = Button(frame, text='Сбросить значения', bg='grey', width=20, height=4)
 Btnplot = Button(frame, text='График показать/скрыть', bg='grey', width=26, height=4, state=None, command=lambda: BtnChangeState('4'))
 AutoRegulation.place(x=172, y=934)
 ManualRegulation.place(x=1240, y=524)

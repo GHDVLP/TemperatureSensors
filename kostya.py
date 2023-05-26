@@ -89,7 +89,6 @@ def create_chart_window():
 		ArrX.append(x)
 		ArrY1.append(temp1)
 		ArrY2.append(progress_percent_fire)
- 
 		ax.clear()
 		ax.plot(ArrX, ArrY1, label = "Темп. датчик 1", color='g')
 		ax.plot(ArrX, ArrY2, color='r', label = "Мощность горелки")
