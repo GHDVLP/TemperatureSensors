@@ -10,8 +10,6 @@ import threading
 import sqlite3
 
 
-
-
 start_time = datetime.now()
 CountBtnClckAutoReg = 1
 CountBtnClckVentilation = 1
@@ -78,7 +76,7 @@ def show_database():
     
     db_window = Toplevel()
     db_window.title("Содержимое базы данных")
-    db_window.geometry("1500x400")
+    db_window.geometry("1200x400")
     
     tree = ttk.Treeview(db_window)
     tree["columns"] = ("timestamp", "tempR1", "tempR2", "pressure", "expenditure")
@@ -102,7 +100,7 @@ def delete_database():
         conn.commit()
         messagebox.showinfo("Успех", "Содержимое базы данных успешно удалено.")
 
-# функция описания начальных значений "датчиков"
+# функция описания значений "датчиков"
 def update_value():
     global tempR1, tempR2, id, updateid
     tempR1 += 5
@@ -405,7 +403,6 @@ main.protocol("WM_DELETE_WINDOW", lambda: close_program(conn))
 def close_program(conn):
     conn.close()
     main.destroy()
-
 
 # запуск главного цикла
 main.mainloop()
