@@ -1,5 +1,6 @@
 from tkinter import *
 from tkinter import ttk
+from tkinter import messagebox
 from PIL import Image, ImageTk
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
@@ -8,19 +9,7 @@ from datetime import datetime
 import threading
 import sqlite3
 
-connection = sqlite3.connect('superscada.db')
-cursor = connection.cursor()
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS data (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tempR1 REAL,
-        tempR2 REAL,
-        pressure REAL,
-        expenditure REAL,
-        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-''')
-connection.commit()
+
 
 
 start_time = datetime.now()
@@ -28,6 +17,7 @@ CountBtnClckAutoReg = 1
 CountBtnClckVentilation = 1
 CountBtnClckStart = 1
 CountBtnClckPlot = 1
+CountBtnClckBD = 1
 
 fig_window = None
 
@@ -39,13 +29,26 @@ expenditure = 0
 id = None
 updateid = None
 
+#Подключение к базе
+conn = sqlite3.connect('superscada.db')
+cursor = conn.cursor()
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS data (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TEXT,
+        tempR1 REAL,
+        tempR2 REAL,
+        pressure REAL,
+        expenditure REAL
+    )
+''')
+
 # функция съема значения с ползунка
 def scaleget(newVal):
     global expenditure
-    newVal = float(newVal)  # Преобразование строки в число
+    newVal = float(newVal) 
     currentValue['text'] = f'Задвижка открыта на\n\n {newVal}/100%'
-
-    expenditure = newVal * 20 / 100  # Пропорциональное значение expenditure от 0 до 60
+    expenditure = newVal * 20 / 100 
     # Обновление метки с расходом воздуха
     labelexpenditure.config(text=f'Расход воздуха:\n{expenditure} м^3/мин')
 
@@ -59,19 +62,45 @@ def update_table():
     table_tempR2.config(text=f'{tempR2} [°C]')
     table_expenditure.config(text=f'{expenditure} [м^3]')
 
-    # Планирование следующего обновления через 1 секунду
     frame.after(1000, update_table)
+
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     cursor.execute('''
-        INSERT INTO data (tempR1, tempR2, pressure, expenditure)
-        VALUES (?, ?, ?, ?)
-    ''', (tempR1, tempR2, pressure, expenditure))
-    connection.commit()
+        INSERT INTO data (timestamp, tempR1, tempR2, pressure, expenditure)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (timestamp, tempR1, tempR2, pressure, expenditure))
+    conn.commit()
 
-    cursor.execute('SELECT tempR1, tempR2, pressure, expenditure FROM data ORDER BY timestamp DESC LIMIT 1')
-    row = cursor.fetchone()
-    if row:
-        tempR1, tempR2, pressure, expenditure = row
+# окно с БД
+def show_database():
+    cursor.execute('SELECT * FROM data')
+    rows = cursor.fetchall()
+    
+    db_window = Toplevel()
+    db_window.title("Содержимое базы данных")
+    db_window.geometry("1500x400")
+    
+    tree = ttk.Treeview(db_window)
+    tree["columns"] = ("timestamp", "tempR1", "tempR2", "pressure", "expenditure")
+    tree.heading("timestamp", text="Время записи")
+    tree.heading("tempR1", text="Температура R1")
+    tree.heading("tempR2", text="Температура R2")
+    tree.heading("pressure", text="Давление")
+    tree.heading("expenditure", text="Расход")
+    
+    for row in rows:
+        tree.insert("", "end", values=row)
+    
+    delete_button = Button(db_window, text="Удалить все записи", command=delete_database)
+    delete_button.pack()
+    tree.pack()    
 
+def delete_database():
+    confirmation = messagebox.askyesno("Подтверждение удаления", "Вы уверены, что хотите удалить все записи из базы данных?")
+    if confirmation:
+        cursor.execute('DELETE FROM data')
+        conn.commit()
+        messagebox.showinfo("Успех", "Содержимое базы данных успешно удалено.")
 
 # функция описания начальных значений "датчиков"
 def update_value():
@@ -96,7 +125,7 @@ def update_value():
     updateid = frame.after(1000, update_value)
     if tempR1 and tempR2 > 100:
         frame.after_cancel(updateid)
-
+        
     
 # функция вентилирования
 def Tempdown():
@@ -121,11 +150,11 @@ def Tempdown():
         labeltempR2.configure(bg='red')
     else:
         labeltempR2.configure(bg='green4')
-    id = frame.after(1000, Tempdown)
+    id = frame.after(1200, Tempdown)
 
 # текущее состояние кнопок
 def BtnChangeState(text):
-    global CountBtnClckAutoReg, CountBtnClckVentilation, CountBtnClckStart, CountBtnClckPlot, id
+    global CountBtnClckAutoReg, CountBtnClckVentilation, CountBtnClckStart, CountBtnClckPlot, CountBtnClckBD, id, updateid
 
     if text == '1':
         CountBtnClckAutoReg += 1
@@ -182,6 +211,12 @@ def BtnChangeState(text):
         CountBtnClckPlot += 1
         if CountBtnClckPlot == 2:
             create_chart_window()
+
+    if text == '5':
+        CountBtnClckBD += 1
+
+        if CountBtnClckBD % 2 == 0:
+            show_database()
         
 
 ArrX = []
@@ -193,10 +228,10 @@ start_time = datetime.now()
 def create_chart_window():
     
     main.chart_window = Toplevel()
-    main.chart_window.title("График")
+    main.chart_window.title("График датчиков температур")
     main.chart_window.geometry("600x400+{}+{}".format(main.winfo_screenwidth() // 2 - 100, main.winfo_screenheight() // 2 - 400))
  
-    fig = plt.Figure(figsize=(5, 4), dpi=100)
+    fig = plt.Figure(figsize=(7, 4), dpi=100)
     ax = fig.add_subplot(111)
  
     canvas = FigureCanvasTkAgg(fig, master=main.chart_window)
@@ -212,6 +247,8 @@ def create_chart_window():
         ArrYR1.append(tempR1)
         ArrYR2.append(tempR2)
         ax.clear()
+        ax.set_xlabel('Время [cек]')
+        ax.set_ylabel('Температура [°C]')
         ax.plot(ArrX, ArrYR1, label = "Темп. датчик радиатора 1", color='g')
         ax.plot(ArrX, ArrYR2, label = "Темп. датчик радиатора 2", color ='red')
         ax.legend()
@@ -249,27 +286,32 @@ frame.pack()
 
 # Создание таблицы для отображения данных
 table_frame = Frame(frame)
-table_frame.place(x=1620, y=900)
+table_frame.place(x=10, y=900)
+
+# Шапка таблицы
+table_header_label = Label(table_frame, text="Показания датчиков")
+table_header_label.grid(row=0, column=0, columnspan=2)
 
 table_pressure_label = Label(table_frame, text="Давление:")
-table_pressure_label.grid(row=0, column=0)
+table_pressure_label.grid(row=1, column=0)
 table_pressure = Label(table_frame, text="")
-table_pressure.grid(row=0, column=1)
+table_pressure.grid(row=1, column=1)
 
 table_tempR1_label = Label(table_frame, text="Темп.1:")
-table_tempR1_label.grid(row=1, column=0)
+table_tempR1_label.grid(row=2, column=0)
 table_tempR1 = Label(table_frame, text="")
-table_tempR1.grid(row=1, column=1)
+table_tempR1.grid(row=2, column=1)
 
 table_tempR2_label = Label(table_frame, text="Темп.2:")
-table_tempR2_label.grid(row=2, column=0)
+table_tempR2_label.grid(row=3, column=0)
 table_tempR2 = Label(table_frame, text="")
-table_tempR2.grid(row=2, column=1)
+table_tempR2.grid(row=3, column=1)
 
 table_expenditure_label = Label(table_frame, text="Расход:")
-table_expenditure_label.grid(row=3, column=0)
+table_expenditure_label.grid(row=4, column=0)
 table_expenditure = Label(table_frame, text="")
-table_expenditure.grid(row=3, column=1)
+table_expenditure.grid(row=4, column=1)
+
 
 # создания фрейма для шкалы заполнения
 frame_bar = Frame(frame)
@@ -286,12 +328,12 @@ for i in range(15):
 AutoRegulation = Button(frame, text='Авт. режим', bg='grey', width=26, height=4, state=None, command=lambda: BtnChangeState('1'))
 ManualRegulation = Button(frame, text='Вкл. вентилирование', bg='grey', width=21, height=2, state=None, command=lambda: BtnChangeState('2'))
 btn = Button(frame, text='Запуск/стоп', bg='grey', width=26, height=4, state=None, command=lambda: BtnChangeState('3'))
-RedrawBtn = Button(frame, text='Сбросить значения', bg='grey', width=20, height=4)
-Btnplot = Button(frame, text='График показать/скрыть', bg='grey', width=26, height=4, state=None, command=lambda: BtnChangeState('4'))
+Btnplot = Button(frame, text='Построить график', bg='grey', width=26, height=4, state=None, command=lambda: BtnChangeState('4'))
+BtnBD = Button(frame, text='База данных', bg='grey', width=26, height=4, state=None, command=lambda: BtnChangeState('5'))
 AutoRegulation.place(x=172, y=934)
 ManualRegulation.place(x=1240, y=524)
 btn.place(x=380, y=934)
-RedrawBtn.place(x=3, y=934)
+BtnBD.place(x=1700, y=934)
 Btnplot.place(x=580, y=934)
 
 # описание ползунка
@@ -316,35 +358,54 @@ labelexpenditure.place(x=1524, y=68)
 
 # функция обработки введенного значения
 def handle_input():
-
     global pressure
-    update_progress()
-    target_pressure = int(entry.get())
-    entry.delete(0, END)
 
-    pressure = 0  
+    def apply_pressure():
+        target_pressure = int(entry.get())
+        entry.delete(0, END)
 
-    def increase_pressure():
-        global pressure  
+        if 0 < target_pressure <= 1600:  
+            pressure = 0
 
-        if pressure < target_pressure:
-            pressure += 1
-            labelpressure.config(text=f'Давление в ресивере:\n{pressure} Па')
-            frame.after(20, increase_pressure)
+            def increase_pressure():
+                global pressure
+
+                if pressure < target_pressure:
+                    pressure += 1
+                    labelpressure.config(text=f'Давление в ресивере:\n{pressure} Па')
+                    frame.after(20, increase_pressure)
+                else:
+                    labelpressure.config(text=f'Давление в ресивере:\n{pressure} Па') 
+
+            increase_pressure()
+            messagebox.showinfo("Успех", "Значение успешно применено") 
         else:
-            labelpressure.config(text=f'Давление в ресивере:\n{pressure} Па')  # Обновляем метку после достижения целевого значения
+            messagebox.showerror("Ошибка", "Недопустимое значение")  
 
-    increase_pressure()
+    # Создание диалогового окна или дополнительной формы для ввода данных
+    input_window = Toplevel()
+    input_window.title("Ввод значения давления")
+    input_window.geometry("300x150+{}+{}".format(main.winfo_screenwidth() // 2 - 150, main.winfo_screenheight() // 2 - 75))
 
-# создание поля ввода
-entry = Entry(frame, width=20, font=("Arial", 12))
-entry.place(x=185, y=634)
+    label = Label(input_window, text="Введите значение давления:")
+    label.pack(pady=10)
 
-# создание кнопки для отправки введенного значения
-send_btn = Button(frame, text="Отправить", width=10, height=1, command=handle_input)
-send_btn.place(x=300, y=632)
+    entry = Entry(input_window, width=10)
+    entry.pack(pady=5)
+
+    button = Button(input_window, text="Применить", command=apply_pressure)
+    button.pack(pady=10)
+
+
+# создание кнопки для уставки давления
+send_btn = Button(frame, text="Установка давления", width=35, height=4, command=handle_input)
+send_btn.place(x=183, y=593)
+
+main.protocol("WM_DELETE_WINDOW", lambda: close_program(conn))
+def close_program(conn):
+    conn.close()
+    main.destroy()
+
 
 # запуск главного цикла
 main.mainloop()
-
-connection.close()
