@@ -61,6 +61,8 @@ def update_table():
     table_expenditure.config(text=f'{expenditure} [м^3]')
 
     frame.after(1000, update_table)
+    update_progress()
+
 
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     cursor.execute('''
@@ -69,6 +71,9 @@ def update_table():
     ''', (timestamp, tempR1, tempR2, pressure, expenditure))
     conn.commit()
 
+    
+
+
 # окно с БД
 def show_database():
     cursor.execute('SELECT * FROM data')
@@ -76,10 +81,11 @@ def show_database():
     
     db_window = Toplevel()
     db_window.title("Содержимое базы данных")
-    db_window.geometry("1200x400")
+    db_window.geometry("1600x400")
     
     tree = ttk.Treeview(db_window)
-    tree["columns"] = ("timestamp", "tempR1", "tempR2", "pressure", "expenditure")
+    tree["columns"] = ("id INTEGER PRIMARY KEY AUTOINCREMENT","timestamp", "tempR1", "tempR2", "pressure", "expenditure")
+    tree.heading("id INTEGER PRIMARY KEY AUTOINCREMENT", text="ID")
     tree.heading("timestamp", text="Время записи")
     tree.heading("tempR1", text="Температура R1")
     tree.heading("tempR2", text="Температура R2")
@@ -148,7 +154,7 @@ def Tempdown():
         labeltempR2.configure(bg='red')
     else:
         labeltempR2.configure(bg='green4')
-    id = frame.after(1200, Tempdown)
+    id = frame.after(1000, Tempdown)
 
 # текущее состояние кнопок
 def BtnChangeState(text):
@@ -258,14 +264,16 @@ def create_chart_window():
 
 # Обновление шкалы прогресса
 def update_progress():
-    global pressure
-    
+    global pressure 
+
     for i in range(15):
         if i < pressure // 100:
             cells[i].configure(bg="red")
         else:
             cells[i].configure(bg="red4")
-    frame.after(1000, update_progress)  
+            
+    frame.after(1000, update_progress)
+
 
 # главное окно
 main = Tk()
@@ -336,7 +344,6 @@ Btnplot.place(x=580, y=934)
 
 # описание ползунка
 scale = Scale(frame, orient='horizontal', highlightbackground='blue', activebackground='black',
-
 from_=0, to=100, width=20, length=250, showvalue=0, sliderlength=20, sliderrelief='raised', command=scaleget)
 scale.place(x=598, y=244)
 currentValue = Label(frame, width=36, height=4, bg='grey80', highlightbackground='black', text='Задвижка открыта на\n\n 0/100%')
@@ -359,11 +366,11 @@ def handle_input():
     global pressure
 
     def apply_pressure():
+        global pressure
         target_pressure = int(entry.get())
         entry.delete(0, END)
 
         if 0 < target_pressure <= 1600:  
-            pressure = 0
 
             def increase_pressure():
                 global pressure
@@ -372,6 +379,7 @@ def handle_input():
                     pressure += 1
                     labelpressure.config(text=f'Давление в ресивере:\n{pressure} Па')
                     frame.after(20, increase_pressure)
+                    
                 else:
                     labelpressure.config(text=f'Давление в ресивере:\n{pressure} Па') 
 
